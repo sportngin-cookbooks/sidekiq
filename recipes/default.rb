@@ -20,3 +20,5 @@ template node[:sidekiq][:sidekiq_conf] do
   mode "0644"
   variables node[:sidekiq]
 end
+
+include_recipe "sidekiq::service"
