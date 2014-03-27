@@ -20,14 +20,6 @@ description "Sidekiq Background Worker"
 # no "start on", we don't want to automatically start
 stop on (stopping sidekiq-manager or runlevel [06])
 
-# change apps to match your deployment user if you want to use this as a less privileged user (recommended!)
-<% if @user %>
-setuid <%= @user %>
-<% end %>
-<% if @group %>
-setgid <%= @group %>
-<% end %>
-
 respawn
 respawn limit 3 30
 
@@ -36,10 +28,11 @@ normal exit 0 TERM USR1
 
 instance ${app}-${index}
 
+
 script
 # this script runs in /bin/sh by default
 # respawn as bash so we can source in rbenv
-exec /bin/bash <<EOT
+exec sudo -u <%= @user %> /bin/bash -c <<EOT
   # uncomment to use syslog for logging
   exec &> /dev/kmsg
 
