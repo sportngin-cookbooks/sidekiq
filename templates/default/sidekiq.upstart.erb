@@ -29,54 +29,12 @@ normal exit 0 TERM USR1
 instance ${app}-${index}
 
 
-script
-# this script runs in /bin/sh by default
-# respawn as bash so we can source in rbenv
-exec sudo -u <%= @user %> /bin/bash -c <<EOT
-  # uncomment to use syslog for logging
-  exec &> /dev/kmsg
-
-  # Pick your poison :) Or none if you're using a system wide installed Ruby.
-  # rbenv
-  # source /home/apps/.bash_profile
-  # OR
-  # source /home/apps/.profile
-  # OR system:
-  # source /etc/profile.d/rbenv.sh
-  #
-  # rvm
-  # source /home/apps/.rvm/scripts/rvm
-  <% if @source_file %>
-    source <%= @source_file %>
-  <% end %>
-
-  logger -t sidekiq "Starting process: $app-$index"
-
-  cd $app
-  <%= @exec_prefix %> sidekiq -i ${index} -e <%= @environment %> -C <%= @config_file %> -P <%= @pids_dir %>/${index}.pid
-EOT
-end script
+exec sudo -u <%= @user %> /bin/bash -c "cd $app && <%= @exec_prefix %> sidekiq -i ${index} -e staging -C config/sidekiq.yml -P tmp/pids/${index}.pid"
 
 pre-stop script
 # this script runs in /bin/sh by default
 # respawn as bash so we can source in rbenv
 exec /bin/bash <<EOT
-  # uncomment to use syslog for logging
-  exec &> /dev/kmsg
-
-  # Pick your poison :) Or none if you're using a system wide installed Ruby.
-  # rbenv
-  # source /home/apps/.bash_profile
-  # OR
-  # source /home/apps/.profile
-  # OR system:
-  # source /etc/profile.d/rbenv.sh
-  #
-  # rvm
-  # source /home/apps/.rvm/scripts/rvm
-  <% if @source_file %>
-    source <%= @source_file %>
-  <% end %>
 
   logger -t sidekiq "Stopping process: $app-$index"
 
