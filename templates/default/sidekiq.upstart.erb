@@ -29,7 +29,7 @@ normal exit 0 TERM USR1
 instance ${app}-${index}
 
 
-exec sudo -u <%= @user %> /bin/bash -c "cd $app && <%= @exec_prefix %> sidekiq -i ${index} -e staging -C config/sidekiq.yml -P tmp/pids/${index}.pid"
+exec sudo -u <%= @user %> /bin/bash -c "cd $app && <%= @exec_prefix %> sidekiq -i ${index} -e <%= @environment %> -C <%= @config_file %> -P <%= @pids_dir %>/${index}.pid"
 
 pre-stop script
 # this script runs in /bin/sh by default
