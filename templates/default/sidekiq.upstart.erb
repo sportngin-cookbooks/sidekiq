@@ -24,7 +24,7 @@ respawn
 respawn limit 3 30
 
 # TERM and USR1 are sent by sidekiqctl when stopping sidekiq.  Without declaring these as normal exit codes, it just respawns.
-normal exit 0 TERM USR1
+normal exit 0 TERM USR1 137 143 KILL
 
 instance ${app}-${index}
 
@@ -39,6 +39,6 @@ exec /bin/bash <<EOT
   logger -t sidekiq "Stopping process: $app-$index"
 
   cd $app
-  <%= @exec_prefix %> sidekiqctl stop <%= @pids_dir %>/${index}.pid
+  logger -t sidekiq `echo <%= @exec_prefix %> sidekiqctl stop <%= @pids_dir %>/${index}.pid <%= @deadline_timeout %>`
 EOT
 end script
