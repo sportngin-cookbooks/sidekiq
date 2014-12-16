@@ -13,6 +13,7 @@ log_daemon_msg () {
 LOGFILE="<%= @logfile %>"
 SIDEKIQ_CONF="<%= @conf_file %>"
 SIDEKIQ_BIN="<%= @bin_file %>"
+SIDEKIQ_QUIET_RESTART_BIN="<%= @quiet_restart_bin_file %>"
 TIMEOUT="<%= @timeout %>"
 
 # Run a method for each sidekiq worker
@@ -85,7 +86,7 @@ do_stop_one() {
         sleep 1
       done
       if checkpid $pid ; then
-        log_daemon_msg "Failed to kill Sidekiq $1 - worker $2 gracefully..hard shut down"
+        log_daemon_msg "Failed to kill Sidekiq $1 - worker $2 gracefully... hard shut down"
         kill -KILL $pid >/dev/null 2>&1
       fi
       # Many daemons don't delete their pidfiles when they exit.
@@ -124,12 +125,27 @@ do_restart_one() {
   return 0
 }
 
+#
+# Function that runs the quiet-restart script on a single worker
+#
+do_quiet_restart() {
+<% if @background_quiet_restart %>
+  app=$1 index=$2 daemon $SIDEKIQ_QUIET_RESTART_BIN
+<% else %>
+  app=$1 index=$2 $SIDEKIQ_QUIET_RESTART_BIN
+<% end %>
+}
+
 start() {
-  for_each_sidekiq_worker "do_start_one" "=> Starting Sidekiq Queues.."
+  for_each_sidekiq_worker "do_start_one" "=> Starting Sidekiq workers..."
 }
 
 stop() {
   for_each_sidekiq_worker "do_stop_one" "=> Stopping all Sidekiq workers"
+}
+
+quiet_restart() {
+  for_each_sidekiq_worker "do_quiet_restart" "=> Beginning quiet restart of all Sidekiq workers"
 }
 
 case "$1" in
@@ -139,8 +155,11 @@ case "$1" in
     stop
     start
     ;;
+  quiet_restart)
+    quiet_restart
+    ;;
   *)
-    echo "Usage: $0 {start|stop|restart}" >&2
+    echo "Usage: $0 {start|stop|restart|quiet_restart}" >&2
     exit 1
     ;;
 esac

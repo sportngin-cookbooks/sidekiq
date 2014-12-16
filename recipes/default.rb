@@ -28,6 +28,13 @@ else
     mode "0755"
     variables node[:sidekiq]
   end
+
+  template node[:sidekiq][:quiet_restart_bin_file] do
+    source "sidekiq-quiet-restart.sh.erb"
+    cookbook "sidekiq"
+    mode "0755"
+    variables node[:sidekiq]
+  end
 end
 
 template node[:sidekiq][:sidekiq_conf] do
