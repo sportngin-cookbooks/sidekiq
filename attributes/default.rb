@@ -1,5 +1,6 @@
 default[:sidekiq][:config_file] = "config/sidekiq.yml"
 default[:sidekiq][:deadline_timeout] = 60
+default[:sidekiq][:env_vars] = { 'PATH' => '/usr/local/bin:$PATH' }
 default[:sidekiq][:environment] = "production"
 default[:sidekiq][:exec_prefix] = "exec"
 default[:sidekiq][:pids_dir] = "tmp/pids"
