@@ -1,0 +1,168 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:  sidekiq
+# Short-Description: sidekiq - Simple, efficient background processing for Ruby
+# Description:  sidekiq - Simple, efficient background processing for Ruby
+### END INIT INFO
+. /etc/init.d/functions
+
+log_daemon_msg () {
+  echo $@
+}
+
+LOGFILE="<%= @logfile %>"
+SIDEKIQ_CONF="<%= @conf_file %>"
+SIDEKIQ_BIN="<%= @bin_file %>"
+TIMEOUT="<%= @timeout %>"
+
+# Start all the Sidekiq workers
+do_start() {
+  local pid_start
+
+  log_daemon_msg "=> Starting Sidekiq Queues.."
+  pid_start=0
+  for i in `cat $SIDEKIQ_CONF`; do
+    app=`echo $i | cut -d , -f 1`
+    num_workers=`echo $i | cut -d , -f 2`
+    for j in `seq $pid_start $(($pid_start + $num_workers - 1))`; do
+      do_start_one $app $j
+    done
+    pid_start=$((j+1))
+  done
+}
+
+# Start/Restart a single Sidekiq process
+do_start_one() {
+  local pidfile
+  local pid
+
+  pidfile=$1/tmp/pids/$2.pid
+  if [ -e $pidfile ]; then
+    pid=`cat $pidfile`
+    # If Sidekiq isn't running, run it, otherwise restart it.
+    if [ "`ps -A -o pid= | grep -c $pid`" -eq 0 ]; then
+      do_start_one_do $1 $2
+    else
+      do_restart_one $1 $2
+    fi
+  else
+    do_start_one_do $1 $2
+  fi
+}
+
+do_start_one_do() {
+  log_daemon_msg "--> Starting Sidekiq $1 - worker $2"
+  log_daemon_msg "logging to $1/$LOGFILE"
+
+  app=$1 index=$2 daemon $SIDEKIQ_BIN
+  log_daemon_msg "Started Sidekiq $1 - worker $2"
+}
+
+#
+# Function that stops all the Sidekiq workers
+#
+do_stop() {
+  local pidfile
+
+  log_daemon_msg "=> Stopping all Sidekiq workers"
+  pid_start=0
+  for i in `cat $SIDEKIQ_CONF`; do
+    app=`echo $i | cut -d , -f 1`
+    num_workers=`echo $i | cut -d , -f 2`
+    for j in `seq $pid_start $(($pid_start + $num_workers - 1))`; do
+      do_stop_one $app $j
+    done
+    pid_start=$(($j+1))
+  done
+}
+#
+# Function that stops the daemon/service
+#
+do_stop_one() {
+  local pidfile
+  local pid
+  log_daemon_msg "--> Stopping Sidekiq $1 - worker $2"
+
+  pidfile=$1/tmp/pids/$2.pid
+  if [ -e $pidfile ]; then
+    pid=`cat $pidfile`
+    if [ "`ps -A -o pid= | grep -c $pid`" -eq 0 ]; then
+      log_daemon_msg "---> Sidekiq $1 - worker $2 isn't running."
+    else
+      log_daemon_msg "---> About to kill PID `cat $pidfile`"
+      kill -QUIT $pid
+      for i in `seq 1 $TIMEOUT`; do
+        checkpid $pid || break
+        sleep 1
+      done
+      if checkpid $pid ; then
+        log_daemon_msg "Failed to kill Sidekiq $1 - worker $2 gracefully..hard shut down"
+        kill -KILL $pid >/dev/null 2>&1
+      fi
+      # Many daemons don't delete their pidfiles when they exit.
+      rm -f $pidfile
+    fi
+  else
+    log_daemon_msg "---> No Sidekiq $1 - worker $2 here..."
+  fi
+  return 0
+}
+
+#
+# Function that restarts the jungle
+#
+do_restart() {
+  local pid_start
+
+  pid_start=0
+  for i in `cat $SIDEKIQ_CONF`; do
+    app=`echo $i | cut -d , -f 1`
+    num_workers=`echo $i | cut -d , -f 2`
+    queues=`echo $i | cut -d , -f 3-`
+    for j in `seq $pid_start $(($pid_start + $num_workers - 1))`; do
+      do_restart_one $app $j
+    done
+    pid_start=$(($j+1))
+  done
+}
+
+#
+# Function that sends a SIGUSR2 to the daemon/service
+#
+do_restart_one() {
+  local pidfile
+  local pid
+
+  pidfile=$1/tmp/pids/$2.pid
+  if [ -e $pidfile ]; then
+    pid=`cat $pidfile`
+    log_daemon_msg "--> About to restart Sidekiq $1 - worker $2"
+    do_stop_one $1 $2
+    do_start_one_do $1 $2
+  else
+    log_daemon_msg "--> Sidekiq was not running... Starting"
+    do_start_one_do $1 $2
+  fi
+  return 0
+}
+
+start() {
+  do_start
+}
+
+stop() {
+  do_stop
+}
+
+case "$1" in
+  start) start ;;
+  stop) stop ;;
+  restart)
+    stop
+    start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}" >&2
+    exit 1
+    ;;
+esac
