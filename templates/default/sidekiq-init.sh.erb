@@ -25,14 +25,14 @@ for_each_sidekiq_worker() {
   local pid_start
 
   # Log a message if one is provided
-  if [[ $2 ]]; then log_daemon_msg $2; fi
+  [[ $2 ]] && log_daemon_msg $2
 
   pid_start=0
   for i in `cat $SIDEKIQ_CONF`; do
     app=`echo $i | cut -d , -f 1`
     num_workers=`echo $i | cut -d , -f 2`
     for j in `seq $pid_start $(($pid_start + $num_workers - 1))`; do
-      $(echo $1) $app $j
+      exec $1 $app $j
     done
     pid_start=$(($j+1))
   done
