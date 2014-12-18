@@ -1,0 +1,12 @@
+#!/bin/bash
+CONFIG_FILE="<%= @config_file %>"
+ENVIRONMENT="<%= @environment %>"
+EXEC_PREFIX="<%= @exec_prefix %>"
+LOGFILE="<%= @logfile %>"
+PIDS_DIR="<%= @pids_dir %>"
+USER="<%= @user %>"
+<% (@env_vars || []).each do |key, var| %>
+<%= key %>=<%= var %>
+<% end %>
+
+exec sudo -u $USER /bin/bash -c "cd $app && $EXEC_PREFIX sidekiq -i $index -e $ENVIRONMENT -C $CONFIG_FILE -P $PIDS_DIR/$index.pid"

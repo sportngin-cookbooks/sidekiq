@@ -1,0 +1,47 @@
+#!/bin/bash
+
+. /etc/init.d/functions
+
+CONFIG_FILE="<%= @config_file %>"
+ENVIRONMENT="<%= @environment %>"
+EXEC_PREFIX="<%= @exec_prefix %>"
+LOGFILE="<%= @logfile %>"
+PIDS_DIR="<%= @pids_dir %>"
+SIDEKIQ_BIN="<%= @bin_file %>"
+USER="<%= @user %>"
+<% (@env_vars || []).each do |key, var| %>
+<%= key %>=<%= var %>
+<% end %>
+
+start_sidekiq() {
+  echo "--> Starting Sidekiq $app - worker $index"
+  echo "logging to $app/$LOGFILE"
+
+  app=$app index=$index exec $SIDEKIQ_BIN
+  echo "Started Sidekiq $app - worker $index"
+}
+
+local pidfile
+local pid
+echo "--> Stopping Sidekiq $app - worker $index"
+
+pidfile=$app/tmp/pids/$index.pid
+if [ -e $pidfile ]; then
+  pid=`cat $pidfile`
+  if [ "`ps -A -o pid= | grep -c $pid`" -eq 0 ]; then
+    echo "---> Sidekiq $app - worker $index isn't running."
+  else
+    echo "---> Quietly stopping Sidekiq PID `cat $pidfile`"
+    sudo -u $USER /bin/bash -c "cd $app && sidekiqctl quiet $PIDS_DIR/$index.pid"
+    while checkpid $pid ; do
+      sleep 1
+    done
+
+    # Many daemons don't delete their pidfiles when they exit.
+    rm -f $pidfile
+    start_sidekiq
+  fi
+else
+  echo "---> No Sidekiq $app - worker $index here..."
+  start_sidekiq
+fi
