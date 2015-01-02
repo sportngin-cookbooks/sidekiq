@@ -29,7 +29,7 @@ normal exit 0 TERM USR1 137 143 KILL
 instance ${app}-${index}
 
 
-exec sudo -u <%= @user %> /bin/bash -c "cd $app && <%= @exec_prefix %> sidekiq -i ${index} -e <%= @environment %> -C <%= @config_file %> -P <%= @pids_dir %>/${index}.pid"
+exec sudo -u <%= @user %> /bin/bash -c "cd $app && <%= @exec_prefix %> sidekiq -i ${index} -e <%= @environment %> -C <%= @config_file %> -P <%= @pids_dir %>/${index}.pid <%= ">> ${app}/#{@log_dir}/sidekiq-${index}.log 2>&1" if @log_dir %>"
 
 pre-stop script
 # this script runs in /bin/sh by default
