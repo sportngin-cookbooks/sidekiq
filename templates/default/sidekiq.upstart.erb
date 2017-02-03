@@ -23,6 +23,10 @@ stop on (stopping sidekiq-manager or runlevel [06])
 respawn
 respawn limit 3 30
 
+<% unless @deadline_timeout.nil? %>
+kill timeout <%= @deadline_timeout.to_i+1 %>
+<% end %>
+
 # TERM and USR1 are sent by sidekiqctl when stopping sidekiq.  Without declaring these as normal exit codes, it just respawns.
 normal exit 0 TERM USR1 137 143 KILL
 
